@@ -1,0 +1,6 @@
+First edit on MNIST dataset: In this experiment we are trying to split the MNIST dataset in two chunks: 
+0-4 -> InDomain
+5-9 -> OOD
+
+Modified python files:
+datasets.py
