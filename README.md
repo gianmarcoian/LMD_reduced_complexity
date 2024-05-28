@@ -7,3 +7,7 @@ So far, before the reduction of the models size, we are tryng to understand the 
 ### First results: 
 With a train on the first 5 digits of the MNIST and 10 times less iterations (130k), a reconstuction by inpainting of
 5 clones with an applied in-domain manifold checkerboard_alt of size 8 mask, we are receiving now a detection of LPIPS AUC: 0.825 (on checkpoint 13)
+
+
+### Reduced model-> 93 MB params found in ddpm_mnist.py (subvp probability flow)
+MNIST vs KMNIST-> 0.9501 LPIPS
