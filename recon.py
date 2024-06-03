@@ -12,7 +12,6 @@ from absl import app
 from torch.utils.data import Dataset, DataLoader
 import os
 
-from torchvision.datasets import CIFAR10, CIFAR100, SVHN, KMNIST, MNIST, FashionMNIST
 import torchvision.transforms as T
 import torch
 
@@ -44,7 +43,6 @@ flags.DEFINE_integer("mask_identifier", 0, "mask identifier")
 
 flags.mark_flags_as_required(["workdir", "config", "ckpt_path", "in_domain", "out_of_domain"])
 
-
 class TensorFlowDatasetWrapper(Dataset):
     def __init__(self, tf_dataset, image_size):
         self.tf_dataset = tf_dataset
@@ -63,122 +61,28 @@ class TensorFlowDatasetWrapper(Dataset):
 
 def get_datasets():
     config = FLAGS.config
-    new_mirror = 'https://ossci-datasets.s3.amazonaws.com/mnist'
-
-    MNIST.resources = [
-        ('/'.join([new_mirror, url.split('/')[-1]]), md5)
-        for url, md5 in MNIST.resources
-    ]
-
-    DATA_TO_PATH = {
-        'ImageNet': "./data/imagenet/subset.txt",
-        'CELEBA': "./data/subset.txt",
-        'CIFAR10': "./data/cifar10",
-        'CIFAR100': "./data/cifar100",
-        'SVHN': "./data/svhn",
-        'FashionMNIST': "./data/fashion_mnist",
-        'MNIST': "./data/mnist",
-        'KMNIST': "./data/kmnist",
-    }
-
     image_size = config.data.image_size
-    if FLAGS.in_domain not in ['CIFAR10', 'CIFAR100', 'SVHN', 'FashionMNIST', 'MNIST', 'KMNIST', 'MNIST_0_5', 'MNIST_6_9', 'MNIST_1', 'MNIST_0_9','MNIST_0_7', 'MNIST_8_9','MNIST_6']:
-        POS_PATH = DATA_TO_PATH[FLAGS.in_domain]
-        pos_subset = read_file(POS_PATH).strip().split("\n")
-        pos_dataset = ImageDataset(pos_subset, image_size=image_size, center_crop=FLAGS.id_center_crop)
-    elif FLAGS.in_domain == 'CIFAR10':
-        pos_dataset = CIFAR10(DATA_TO_PATH[FLAGS.in_domain], train=False,
-                              transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.in_domain == 'CIFAR100':
-        pos_dataset = CIFAR100(DATA_TO_PATH[FLAGS.in_domain], train=False,
-                               transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.in_domain == 'SVHN':
-        pos_dataset = SVHN(DATA_TO_PATH[FLAGS.in_domain], split='test',
-                           transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.in_domain == 'MNIST_1':
-        digits_to_include = [1]
-        samples_per_digit = 10000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_0_9':
-        digits_to_include = [0, 2, 3, 4, 5, 6, 7, 8, 9]
-        samples_per_digit = 1000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_0_7':
-        digits_to_include = [0, 2, 3, 4, 5, 6, 7]
-        samples_per_digit = 1000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_8_9':
-        digits_to_include = [ 8, 9]
-        samples_per_digit = 1000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_0_5':
-        digits_to_include = [0, 1, 2, 3, 4, 5]
-        samples_per_digit = 1000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_6':
-        digits_to_include = [ 6]
-        samples_per_digit = 1000
-        _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
-    elif FLAGS.in_domain == 'MNIST_6_9':
-        pos_dataset = MNIST_6_9(DATA_TO_PATH['MNIST'], train=False,
-                                transform=T.Compose([T.ToTensor(), T.Lambda(lambda x: x.repeat(3, 1, 1)), T.Resize(image_size)]), download=True)
-    else:
-        raise NotImplementedError
+    samples_per_digit = 1000  # Adjust this number as needed
 
-    if FLAGS.out_of_domain not in ['CIFAR10', 'CIFAR100', 'SVHN', 'FashionMNIST', 'MNIST', 'KMNIST', 'MNIST_0_5', 'MNIST_6_9', 'MNIST_1', 'MNIST_0_9','MNIST_0_7', 'MNIST_8_9','MNIST_6']:
-        NEG_PATH = DATA_TO_PATH[FLAGS.out_of_domain]
-        neg_subset = read_file(NEG_PATH).strip().split("\n")
-        neg_dataset = ImageDataset(neg_subset, image_size=image_size, center_crop=FLAGS.ood_center_crop)
-    elif FLAGS.out_of_domain == 'CIFAR10':
-        neg_dataset = CIFAR10(DATA_TO_PATH[FLAGS.out_of_domain], train=False,
-                              transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.out_of_domain == 'CIFAR100':
-        neg_dataset = CIFAR100(DATA_TO_PATH[FLAGS.out_of_domain], train=False,
-                               transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.out_of_domain == 'SVHN':
-        neg_dataset = SVHN(DATA_TO_PATH[FLAGS.out_of_domain], split='test',
-                           transform=T.Compose([T.ToTensor(), T.Resize(image_size)]), download=True)
-    elif FLAGS.out_of_domain == 'MNIST_1':
+    if FLAGS.in_domain == 'MNIST_IN':
         digits_to_include = [1]
-        samples_per_digit = 10000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_0_9':
+    elif FLAGS.in_domain == 'MNIST_OUT':
         digits_to_include = [0, 2, 3, 4, 5, 6, 7, 8, 9]
-        samples_per_digit = 1000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_0_7':
-        digits_to_include = [0, 2, 3, 4, 5, 6, 7]
-        samples_per_digit = 1000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_8_9':
-        digits_to_include = [ 8, 9]
-        samples_per_digit = 1000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_0_5':
-        digits_to_include = [0, 1, 2, 3, 4, 5]
-        samples_per_digit = 1000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_6':
-        digits_to_include = [6]
-        samples_per_digit = 1000
-        _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
-        neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
-    elif FLAGS.out_of_domain == 'MNIST_6_9':
-        neg_dataset = MNIST_6_9(DATA_TO_PATH['MNIST'], train=False,
-                                transform=T.Compose([T.ToTensor(), T.Lambda(lambda x: x.repeat(3, 1, 1)), T.Resize(image_size)]), download=True)
     else:
-        raise NotImplementedError
+        raise ValueError(f"Invalid value for in_domain: {FLAGS.in_domain}")
+
+    _, pos_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
+    pos_dataset = TensorFlowDatasetWrapper(pos_tf_dataset, image_size)
+
+    if FLAGS.out_of_domain == 'MNIST_IN':
+        digits_to_include = [1]
+    elif FLAGS.out_of_domain == 'MNIST_OUT':
+        digits_to_include = [0, 2, 3, 4, 5, 6, 7, 8, 9]
+    else:
+        raise ValueError(f"Invalid value for out_of_domain: {FLAGS.out_of_domain}")
+
+    _, neg_tf_dataset, _ = datasets.load_filtered_mnist(digits_to_include, samples_per_digit)
+    neg_dataset = TensorFlowDatasetWrapper(neg_tf_dataset, image_size)
 
     return pos_dataset, neg_dataset
 
@@ -280,7 +184,7 @@ def main(argv):
             if os.path.exists("%s/pos/batch_%d.pth" % (FLAGS.workdir, i)):
                 continue
 
-            if FLAGS.in_domain in ['CIFAR10', 'CIFAR100', 'SVHN', 'FashionMNIST', 'MNIST', 'KMNIST', 'MNIST_0_5', 'MNIST_6_9', 'MNIST_1', 'MNIST_0_9','MNIST_0_7', 'MNIST_8_9','MNIST_6']:
+            if FLAGS.in_domain == 'MNIST_IN':
                 batch = batch.cuda()
             else:
                 batch = batch.cuda()
@@ -300,7 +204,7 @@ def main(argv):
             if os.path.exists("%s/neg/batch_%d.pth" % (FLAGS.workdir, i)):
                 continue
 
-            if FLAGS.out_of_domain in ['CIFAR10', 'CIFAR100', 'SVHN', 'FashionMNIST', 'MNIST', 'KMNIST', 'MNIST_0_5', 'MNIST_6_9', 'MNIST_1', 'MNIST_0_9','MNIST_0_7', 'MNIST_8_9','MNIST_6']:
+            if FLAGS.out_of_domain == 'MNIST_IN':
                 batch = batch.cuda()
             else:
                 batch = batch.cuda()
