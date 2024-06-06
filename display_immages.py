@@ -43,7 +43,7 @@ def save_combined_images(batch_file, output_dir, num_images=9):
     plt.savefig(output_file, format='jpeg')
     plt.close(fig)
 
-batch_file_path = 'path_to_your_batch.pth'
+batch_file_path = 'path_to_your_batch.pth'   #for each batch you can see all the images with the reconstructions
 output_directory = 'path_to_output_directory'
 
 save_combined_images(batch_file_path, output_directory, num_images=9)
