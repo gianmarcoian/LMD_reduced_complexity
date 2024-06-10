@@ -13,9 +13,9 @@ With a train on the first 5 digits of the MNIST and 10 times less iterations (13
 MNIST vs KMNIST-> 0.9501 LPIPS
 
 
-## Model comparison with mnist digits 0,1,2,3 IN_domain and 4,5,9 Out_of_domain
+### Model comparison with mnist digits 0,1,2,3 IN_domain and 4,5,9 Out_of_domain
 
-  105 MB: LPIPS ROC AUC: 0.9942
-  20 MB: LPIPS ROC AUC: 0.9560
-  12 MB: LPIPS ROC AUC: 0.9408
+  - 105 MB: LPIPS ROC AUC: 0.9942
+  - 20 MB: LPIPS ROC AUC: 0.9560
+  - 12 MB: LPIPS ROC AUC: 0.9408
   
