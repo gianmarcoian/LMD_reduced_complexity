@@ -24,7 +24,7 @@ flags.DEFINE_string("workdir", None, "Work directory.")
 flags.DEFINE_string("ckpt_path", None, "checkpoint path to load")
 flags.DEFINE_integer("reps_per_image", 1, 'number of recons to do for each image')
 
-# Data related args-> from batch_size to num_images
+# Data related args
 flags.DEFINE_integer("num_images_in", 10, "number of in-domain images to reconstruct")
 flags.DEFINE_integer("num_images_out", 10, "number of out-of-domain images to reconstruct")
 flags.DEFINE_string("in_domain", None, 'in-domain dataset')
@@ -76,7 +76,6 @@ def get_datasets():
 
     return pos_images, neg_images
 
-
 def get_mask_info_dict():
     return {
         "mask_type": FLAGS.mask_type, 
@@ -102,8 +101,8 @@ class Detector(object):
 
         assert FLAGS.mask_type in ['center', 'checkerboard', 'random', 'checkerboard_alt']
 
-        self.shape = ( self.config.data.num_channels,
-                      self.config.data.image_size, self.config.data.image_size)
+        self.shape = (FLAGS.config.data.num_channels,
+                      FLAGS.config.data.image_size, FLAGS.config.data.image_size)
 
         self.scaler = datasets.get_data_scaler(self.config)
         self.inverse_scaler = datasets.get_data_inverse_scaler(self.config)
@@ -122,28 +121,16 @@ class Detector(object):
             continuous=self.config.training.continuous,
             denoise=self.config.sampling.noise_removal, 
             eps=self.eps)
-    def recon(self, image, i, mask_info_dict=None, mode="pos"):
-        mask = get_mask(
-            mask_type=mask_info_dict["mask_type"],
-            image_size=mask_info_dict["image_size"],
-            num_channels=mask_info_dict["num_channels"],
-            mask_file_path=mask_info_dict["mask_file_path"],
-            checkerboard_num_blocks=mask_info_dict["checkerboard_num_blocks"],
-            rand_patch_size=mask_info_dict["rand_patch_size"],
-            rand_mask_ratio=mask_info_dict["rand_mask_ratio"],
-            maskgen=mask_info_dict["maskgen"],
-            maskgen_offset=mask_info_dict["maskgen_offset"]
-        ).cuda()
-
+    
+    def recon(self, image, mask_info_dict=None, mode="pos"):
+        mask = get_mask(**mask_info_dict).unsqueeze(0).cuda()  # Aggiungi una dimensione batch di 1
         if FLAGS.save_mask:
-            save_mask(
-                mask=mask, 
-                info_dict=mask_info_dict, 
-                save_dir="{workdir}/{mode}/mask".format(workdir=FLAGS.workdir, mode=mode), 
-                compress=True,
-                identifier="{i}_{j}".format(i=i, j=mask_info_dict['maskgen_offset'])
-            )
-
+            save_mask(mask=mask, 
+                      info_dict=mask_info_dict, 
+                      save_dir="{workdir}/{mode}/mask".format(workdir=FLAGS.workdir, mode=mode), 
+                      compress=True,
+                      identifier="{j}".format(j=mask_info_dict['maskgen_offset']))
+        
         image_masked = image * mask
         image_inpainted = self.inpainter(self.model, self.scaler(image.cuda()), mask.cuda())
         return image_masked.detach().cpu(), image_inpainted.detach().cpu()
@@ -182,7 +169,7 @@ def main(argv):
 
             for j in range(FLAGS.reps_per_image):
                 mask_info_dict['maskgen_offset'] = j
-                masked, recon = detector.recon(batch=image, i=i, mask_info_dict=mask_info_dict, mode="pos")
+                masked, recon = detector.recon(image=image, mask_info_dict=mask_info_dict, mode="pos")
                 save_dict["masked"].append(masked)
                 save_dict["recon"].append(recon)
 
@@ -195,7 +182,7 @@ def main(argv):
 
             for j in range(FLAGS.reps_per_image):
                 mask_info_dict['maskgen_offset'] = j
-                masked, recon = detector.recon(batch=image, i=i, mask_info_dict=mask_info_dict, mode="neg")
+                masked, recon = detector.recon(image=image, mask_info_dict=mask_info_dict, mode="neg")
                 save_dict["masked"].append(masked)
                 save_dict["recon"].append(recon)
 
@@ -204,3 +191,4 @@ def main(argv):
 
 if __name__ == "__main__":
     app.run(main)
+
